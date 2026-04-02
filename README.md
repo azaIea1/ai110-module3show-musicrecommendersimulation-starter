@@ -11,23 +11,29 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
+This simulation builds a content-based music recommender that scores songs by comparing their attributes (genre, mood, energy, valence, acousticness) to a user's taste profile. It uses a weighted proximity formula so that songs closest to the user's preferences rank highest, and returns the top-k recommendations with a plain-language explanation for each suggestion.
 
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
+Real-world music recommenders like Spotify or YouTube use two main strategies: **collaborative filtering**, which looks at what similar users listened to, and **content-based filtering**, which compares the actual attributes of songs to a user's taste profile. Spotify's "Discover Weekly" blends both — it finds users who liked the same tracks as you, then surfaces songs those users enjoyed that you haven't heard yet. At scale, this involves embedding millions of songs and users into vector spaces and finding nearest neighbors. My simulation focuses on the simpler content-based approach: compare each song's features directly to what the user says they like, score every song, and return the top matches.
 
-Some prompts to answer:
+**Song features used:**
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+Each `Song` object stores: `genre` (e.g., pop, lofi, rock), `mood` (e.g., happy, chill, intense), `energy` (0–1 scale of loudness/activity), `valence` (0–1 scale of musical positivity), and `acousticness` (0–1 scale of acoustic vs. electronic sound).
 
-You can include a simple diagram or bullet list if helpful.
+**UserProfile stores:**
+
+The user's `favorite_genre`, `favorite_mood`, `target_energy` (a numeric preference between 0 and 1), and `likes_acoustic` (a boolean that maps to a preferred acousticness range).
+
+**How the Recommender scores each song:**
+
+The scoring rule rewards closeness rather than raw magnitude. Categorical features (genre, mood) earn full points for a match and zero for a mismatch. Numeric features use proximity scoring: `1 - |user_preference - song_value|`, so a song at exactly the user's preferred energy level scores 1.0 and a song at the opposite extreme scores 0.0. Each feature is weighted by importance — genre carries the most weight (3.0), followed by mood (2.0), energy (1.5), valence (1.0), and acousticness (0.5).
+
+**How songs are chosen:**
+
+After every song in the catalog receives a score, the Ranking Rule sorts them from highest to lowest and returns the top `k` results. Keeping the Scoring Rule (how good is one song?) separate from the Ranking Rule (which songs make the list?) makes it easy to experiment — for example, you could later modify the Ranking Rule to ensure genre diversity without touching the scoring math.
 
 ---
 
