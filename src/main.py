@@ -8,7 +8,7 @@ Run from the project root with:
     python -m src.main
 """
 
-from recommender import load_songs, recommend_songs
+from .recommender import load_songs, recommend_songs
 
 
 # ---------------------------------------------------------------------------

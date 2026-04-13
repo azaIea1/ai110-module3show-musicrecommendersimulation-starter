@@ -97,7 +97,27 @@ pytest
 
 ## Terminal Output
 
-Below is the actual output from running `python -m src.main` with all five user profiles.
+### High-Energy Pop
+![High-Energy Pop](images/profile_pop.png)
+
+### Chill Lofi
+![Chill Lofi](images/profile_lofi.png)
+
+### Deep Intense Rock
+![Deep Intense Rock](images/profile_rock.png)
+
+### Gym Workout
+![Gym Workout](images/profile_gym.png)
+
+### Late Night Study
+![Late Night Study](images/proflie_study.png)
+
+### Experiment: Weight Shift
+![Experiment](images/profile_experiment.png)
+
+---
+
+Below is the same output as plain text for reference:
 
 ```
 Loaded songs: 18
