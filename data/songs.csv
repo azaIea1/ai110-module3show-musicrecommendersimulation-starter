@@ -17,3 +17,15 @@ id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
 16,Iron Cathedral,Shatter Veil,metal,aggressive,0.97,168,0.31,0.59,0.06
 17,Willow and Rain,Fern Hollow,folk,melancholic,0.29,74,0.44,0.38,0.91
 18,Island Morning,Koa Drift,reggae,uplifting,0.61,82,0.83,0.76,0.55
+19,Deep Blue Drift,Coral Static,ambient,focused,0.25,58,0.62,0.35,0.94
+20,Heartbeat Pulse,Zara Soleil,pop,romantic,0.68,112,0.86,0.80,0.20
+21,Broken Strings,Echo Plains,indie,melancholic,0.45,88,0.38,0.50,0.65
+22,Bass Drop City,Frequency Unit,edm,euphoric,0.98,145,0.79,0.97,0.02
+23,Golden Afternoon,The Sunbirds,folk,happy,0.48,95,0.80,0.60,0.85
+24,Anxiety Dreams,Pale Signal,alternative,anxious,0.72,130,0.30,0.65,0.15
+25,Study Hall,Quiet Frequency,lofi,focused,0.33,70,0.55,0.48,0.82
+26,Thunderclap,Iron Wolves,metal,aggressive,0.99,175,0.28,0.62,0.04
+27,Slow Burn Sunday,Magnolia Sound,r&b,relaxed,0.50,80,0.76,0.64,0.48
+28,Neon Jungle,City Phantoms,synthwave,moody,0.80,115,0.52,0.78,0.14
+29,Peaceful Pines,River Oak,classical,peaceful,0.18,55,0.78,0.25,0.99
+30,Run the Night,Sprint Code,hip-hop,confident,0.90,105,0.68,0.93,0.07

@@ -1,0 +1,86 @@
+2026-04-27 01:07:12,589 [INFO] src.rag_recommender: Loading song catalog from data/songs.csv
+2026-04-27 01:07:12,590 [INFO] src.rag_recommender: Loading embedding model: all-MiniLM-L6-v2
+2026-04-27 01:07:41,409 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+2026-04-27 01:07:41,409 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-04-27 01:07:42,767 [INFO] src.rag_recommender: Building FAISS index for 30 songs
+2026-04-27 01:07:42,769 [INFO] faiss.loader: Loading faiss with AVX2 support.
+2026-04-27 01:07:42,913 [INFO] faiss.loader: Successfully loaded faiss with AVX2 support.
+2026-04-27 01:07:43,217 [INFO] src.rag_recommender: RAG engine ready.
+2026-04-27 01:08:25,673 [INFO] __main__: User query: 'I wnat something chill to study to'
+2026-04-27 01:08:26,366 [INFO] src.groq_chat: Calling Groq API | query='I wnat something chill to study to' | retrieved=5 | top_score=0.270
+2026-04-27 01:08:26,602 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-04-27 01:08:26,603 [ERROR] src.groq_chat: Groq API error: Error code: 400 - {'error': {'message': 'The model `llama3-8b-8192` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to use instead.', 'type': 'invalid_request_error', 'code': 'model_decommissioned'}}
+2026-04-27 01:08:26,603 [INFO] __main__: Exchange logged. Session total: 1
+2026-04-27 01:09:09,984 [INFO] src.rag_recommender: Loading song catalog from data/songs.csv
+2026-04-27 01:09:09,985 [INFO] src.rag_recommender: Loading embedding model: all-MiniLM-L6-v2
+2026-04-27 01:09:14,939 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+2026-04-27 01:09:14,939 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-04-27 01:09:16,009 [INFO] src.rag_recommender: Building FAISS index for 30 songs
+2026-04-27 01:09:16,011 [INFO] faiss.loader: Loading faiss with AVX2 support.
+2026-04-27 01:09:16,025 [INFO] faiss.loader: Successfully loaded faiss with AVX2 support.
+2026-04-27 01:09:16,242 [INFO] src.rag_recommender: RAG engine ready.
+2026-04-27 01:09:25,592 [INFO] __main__: User query: 'I want something chill to study to'
+2026-04-27 01:09:26,069 [INFO] src.groq_chat: Calling Groq API | query='I want something chill to study to' | retrieved=5 | top_score=0.335
+2026-04-27 01:09:26,186 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2026-04-27 01:09:26,187 [ERROR] src.groq_chat: Groq API error: Error code: 400 - {'error': {'message': 'The model `llama3-70b-8192` has been decommissioned and is no longer supported. Please refer to https://console.groq.com/docs/deprecations for a recommendation on which model to use instead.', 'type': 'invalid_request_error', 'code': 'model_decommissioned'}}
+2026-04-27 01:09:26,187 [INFO] __main__: Exchange logged. Session total: 1
+2026-04-27 01:10:00,751 [INFO] src.rag_recommender: Loading song catalog from data/songs.csv
+2026-04-27 01:10:00,751 [INFO] src.rag_recommender: Loading embedding model: all-MiniLM-L6-v2
+2026-04-27 01:10:06,291 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+2026-04-27 01:10:06,292 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-04-27 01:10:07,528 [INFO] src.rag_recommender: Building FAISS index for 30 songs
+2026-04-27 01:10:07,530 [INFO] faiss.loader: Loading faiss with AVX2 support.
+2026-04-27 01:10:07,549 [INFO] faiss.loader: Successfully loaded faiss with AVX2 support.
+2026-04-27 01:10:07,733 [INFO] src.rag_recommender: RAG engine ready.
+2026-04-27 01:10:19,607 [INFO] __main__: User query: 'I want something chill to study to'
+2026-04-27 01:10:20,093 [INFO] src.groq_chat: Calling Groq API | query='I want something chill to study to' | retrieved=5 | top_score=0.335
+2026-04-27 01:10:21,029 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-27 01:10:21,039 [INFO] src.groq_chat: Groq response received (807 chars)
+2026-04-27 01:10:21,039 [INFO] __main__: Exchange logged. Session total: 1
+2026-04-27 01:10:48,935 [INFO] __main__: User query: 'Give me high energy songs for the gym'
+2026-04-27 01:10:49,211 [INFO] src.groq_chat: Calling Groq API | query='Give me high energy songs for the gym' | retrieved=5 | top_score=0.623
+2026-04-27 01:10:50,249 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-27 01:10:50,250 [INFO] src.groq_chat: Groq response received (1258 chars)
+2026-04-27 01:10:50,250 [INFO] __main__: Exchange logged. Session total: 2
+2026-04-27 01:10:55,874 [INFO] __main__: User query: 'I feel sad and nostalgic'
+2026-04-27 01:10:56,159 [INFO] src.groq_chat: Calling Groq API | query='I feel sad and nostalgic' | retrieved=5 | top_score=0.242
+2026-04-27 01:10:57,237 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-27 01:10:57,237 [INFO] src.groq_chat: Groq response received (1044 chars)
+2026-04-27 01:10:57,238 [INFO] __main__: Exchange logged. Session total: 3
+2026-04-27 01:16:48,790 [INFO] src.rag_recommender: Loading song catalog from data/songs.csv
+2026-04-27 01:16:48,791 [INFO] src.rag_recommender: Loading embedding model: all-MiniLM-L6-v2
+2026-04-27 01:16:54,392 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+2026-04-27 01:16:54,393 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-04-27 01:16:55,261 [INFO] src.rag_recommender: Building FAISS index for 30 songs
+2026-04-27 01:16:55,263 [INFO] faiss.loader: Loading faiss with AVX2 support.
+2026-04-27 01:16:55,280 [INFO] faiss.loader: Successfully loaded faiss with AVX2 support.
+2026-04-27 01:16:55,476 [INFO] src.rag_recommender: RAG engine ready.
+2026-04-27 01:16:58,814 [INFO] __main__: User query: 'write me a Python function to sort a list'
+2026-04-27 01:16:58,825 [WARNING] src.groq_chat: Off-topic query blocked: 'write me a Python function to sort a list'
+2026-04-27 01:16:58,825 [INFO] __main__: Exchange logged. Session total: 1
+2026-04-27 01:25:37,026 [INFO] src.rag_recommender: Loading song catalog from data/songs.csv
+2026-04-27 01:25:37,026 [INFO] src.rag_recommender: Loading embedding model: all-MiniLM-L6-v2
+2026-04-27 01:25:41,913 [INFO] sentence_transformers.SentenceTransformer: Use pytorch device_name: cpu
+2026-04-27 01:25:41,914 [INFO] sentence_transformers.SentenceTransformer: Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-04-27 01:25:42,762 [INFO] src.rag_recommender: Building FAISS index for 30 songs
+2026-04-27 01:25:42,763 [INFO] faiss.loader: Loading faiss with AVX2 support.
+2026-04-27 01:25:42,777 [INFO] faiss.loader: Successfully loaded faiss with AVX2 support.
+2026-04-27 01:25:42,968 [INFO] src.rag_recommender: RAG engine ready.
+2026-04-27 01:25:51,319 [INFO] __main__: User query: 'I want something chill to study to'
+2026-04-27 01:25:51,821 [INFO] src.groq_chat: Calling Groq API | query='I want something chill to study to' | retrieved=5 | top_score=0.335
+2026-04-27 01:25:52,882 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-27 01:25:52,892 [INFO] src.groq_chat: Groq response received (880 chars)
+2026-04-27 01:25:52,893 [INFO] __main__: Exchange logged. Session total: 1
+2026-04-27 01:26:23,593 [INFO] __main__: User query: 'Give me high energy songs for the gym'
+2026-04-27 01:26:23,884 [INFO] src.groq_chat: Calling Groq API | query='Give me high energy songs for the gym' | retrieved=5 | top_score=0.623
+2026-04-27 01:26:24,705 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-27 01:26:24,706 [INFO] src.groq_chat: Groq response received (865 chars)
+2026-04-27 01:26:24,707 [INFO] __main__: Exchange logged. Session total: 2
+2026-04-27 01:26:53,225 [INFO] __main__: User query: 'I feel really sad and nostalgic today'
+2026-04-27 01:26:53,533 [INFO] src.groq_chat: Calling Groq API | query='I feel really sad and nostalgic today' | retrieved=5 | top_score=0.265
+2026-04-27 01:26:54,313 [INFO] httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-27 01:26:54,314 [INFO] src.groq_chat: Groq response received (1058 chars)
+2026-04-27 01:26:54,314 [INFO] __main__: Exchange logged. Session total: 3
+2026-04-27 01:27:14,913 [INFO] __main__: User query: 'Write me a Python fuction to sort a list'
+2026-04-27 01:27:14,939 [WARNING] src.groq_chat: Off-topic query blocked: 'Write me a Python fuction to sort a list'
+2026-04-27 01:27:14,939 [INFO] __main__: Exchange logged. Session total: 4

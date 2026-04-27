@@ -1,341 +1,371 @@
-# 🎵 Music Recommender Simulation
+# 🎵 VibeFinder 2.0 — RAG-Powered Music Recommender
 
-## Project Summary
-
-In this project you will build and explain a small music recommender system.
-
-Your goal is to:
-
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
-
-This simulation builds a content-based music recommender that scores songs by comparing their attributes (genre, mood, energy, valence, acousticness) to a user's taste profile. It uses a weighted proximity formula so that songs closest to the user's preferences rank highest, and returns the top-k recommendations with a plain-language explanation for each suggestion.
+> **Base project:** *VibeFinder 1.0 — Music Recommender Simulation* (Modules 1–3)
+> The original project built a content-based recommender that scored songs against
+> structured user profiles using weighted feature matching (genre, mood, energy, valence,
+> acousticness). It worked well for predefined profiles but required users to provide
+> structured numeric inputs and could not understand natural language requests.
+> VibeFinder 2.0 replaces the rigid profile system with a full RAG pipeline and
+> conversational LLM interface.
 
 ---
 
-## How The System Works
+## Title and Summary
 
-Real-world music recommenders like Spotify or YouTube use two main strategies: **collaborative filtering**, which looks at what similar users listened to, and **content-based filtering**, which compares the actual attributes of songs to a user's taste profile. Spotify's "Discover Weekly" blends both — it finds users who liked the same tracks as you, then surfaces songs those users enjoyed that you haven't heard yet. At scale, this involves embedding millions of songs and users into vector spaces and finding nearest neighbors. My simulation focuses on the simpler content-based approach: compare each song's features directly to what the user says they like, score every song, and return the top matches.
+**VibeFinder 2.0** is a Retrieval-Augmented Generation (RAG) music recommendation
+chatbot. Users describe what they want to hear in plain language — *"I need something
+chill to study to"* or *"pump-up songs for the gym"* — and the system:
 
-**Song features used:**
+1. **Retrieves** the most semantically relevant songs from the catalog using
+   dense vector embeddings (sentence-transformers) and a FAISS similarity index.
+2. **Augments** a prompt with the retrieved songs so the LLM never hallucinates titles.
+3. **Generates** a personalized, conversational recommendation using Groq's free
+   LLaMA 3 API, grounded entirely in real catalog data.
 
-Each `Song` object stores: `genre` (e.g., pop, lofi, rock), `mood` (e.g., happy, chill, intense), `energy` (0–1 scale of loudness/activity), `valence` (0–1 scale of musical positivity), `danceability`, `acousticness` (0–1 scale of acoustic vs. electronic sound), and `tempo_bpm`.
+Why it matters: traditional music recommenders require users to know and specify exact
+genre/mood/energy values. RAG lets users express themselves naturally while ensuring
+every AI response is factually grounded in the actual song catalog.
 
-**UserProfile stores:**
+---
 
-The user's `favorite_genre`, `favorite_mood`, `target_energy` (a numeric preference between 0 and 1), and `likes_acoustic` (a boolean that maps to a preferred acousticness range). The functional API also accepts an optional `valence` target.
+## Architecture Overview
 
-**Algorithm Recipe — how the recommender scores each song:**
+```
+ User natural-language query
+         │
+         ▼
+ ┌───────────────────┐
+ │   Guardrail       │  ← Rejects off-topic queries before touching the LLM
+ └────────┬──────────┘
+          │ music-related query
+          ▼
+ ┌───────────────────┐
+ │  Query Embedding  │  ← sentence-transformers all-MiniLM-L6-v2 (local, free)
+ └────────┬──────────┘
+          │ 384-dim vector
+          ▼
+ ┌───────────────────┐     ┌──────────────────────────────┐
+ │   FAISS Index     │ ←── │  Song Catalog (songs.csv)    │
+ │  (cosine sim.)    │     │  Pre-embedded at startup     │
+ └────────┬──────────┘     └──────────────────────────────┘
+          │ top-k songs + confidence scores
+          ▼
+ ┌───────────────────┐
+ │  Prompt Builder   │  ← Injects retrieved songs into the prompt (RAG augmentation)
+ └────────┬──────────┘
+          │ augmented prompt
+          ▼
+ ┌───────────────────┐
+ │  Groq LLaMA 3     │  ← Free-tier LLM generates grounded natural-language response
+ └────────┬──────────┘
+          │ recommendation text
+          ▼
+ ┌───────────────────┐
+ │  CLI / Response   │  ← Shows retrieval metadata + LLM response to user
+ └───────────────────┘
+          │
+          ▼
+ ┌───────────────────┐
+ │  Logger + Tests   │  ← vibefinder.log + pytest + test harness
+ └───────────────────┘
+```
 
-The scoring rule rewards closeness rather than raw magnitude. Categorical features (genre, mood) earn full points for a match and zero for a mismatch. Numeric features use proximity scoring so that a song at exactly the user's preferred value scores maximum points and the score shrinks the further away the song's value is from the target.
-
-| Feature | Match type | Points awarded |
-|---|---|---|
-| Genre | Exact match | +3.0 |
-| Mood | Exact match | +2.0 |
-| Energy | Proximity: `1.5 × (1 − |target − song|)` | 0 – 1.5 |
-| Valence | Proximity: `1.0 × (1 − |target − song|)` | 0 – 1.0 |
-| Acousticness | Preference match | +0.5 |
-
-**Potential bias to watch for:** Genre carries the most weight (3.0), which means a pop user will almost never see a jazz recommendation even if the jazz song is a perfect energy and mood match. This creates a "filter bubble" within genre silos.
-
-**How songs are chosen (Ranking Rule):**
-
-After every song in the catalog receives a score, `sorted()` (non-destructive, returns a new list) sorts them from highest to lowest and returns the top `k` results. Keeping the Scoring Rule (how good is one song?) separate from the Ranking Rule (which songs make the list?) makes it easy to experiment — you can modify scoring weights without touching the sorting logic.
-
-**Mermaid.js data flow:**
+**Mermaid diagram** (also see `assets/system_diagram.md`):
 
 ```mermaid
-flowchart LR
-    A[User Preferences\ngenre · mood · energy] --> B[For Each Song in CSV]
-    B --> C{Score Song}
-    C -->|genre match| D[+3.0 pts]
-    C -->|mood match| E[+2.0 pts]
-    C -->|energy proximity| F[0–1.5 pts]
-    C -->|valence proximity| G[0–1.0 pts]
-    C -->|acousticness match| H[+0.5 pts]
-    D & E & F & G & H --> I[Total Score]
-    I --> J[Sort All Songs\nhigh → low]
-    J --> K[Return Top-K\nRecommendations]
+flowchart TD
+    A[User: natural language query] --> B{Guardrail\nmusic-related?}
+    B -- No --> Z[Reject with helpful message]
+    B -- Yes --> C[Embed query\nall-MiniLM-L6-v2]
+    C --> D[FAISS cosine search\nover song embeddings]
+    D --> E[Top-k songs\n+ confidence scores]
+    E --> F[Build augmented prompt\nRAG injection]
+    F --> G[Groq LLaMA 3\nfree tier]
+    G --> H[Natural language\nrecommendation]
+    H --> I[Display to user\nwith retrieval metadata]
+    I --> J[Logger: vibefinder.log]
+
+    subgraph Startup
+        K[songs.csv 30 songs] --> L[song_to_text conversion]
+        L --> M[Embed all songs\nsentence-transformers]
+        M --> N[FAISS Index built in memory]
+    end
+    N --> D
 ```
 
 ---
 
-## Getting Started
+## Setup Instructions
 
-### Setup
-
-1. Create a virtual environment (optional but recommended):
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Run the app:
-
-   ```bash
-   python -m src.main
-   ```
-
-### Running Tests
+### 1. Clone the repository
 
 ```bash
-pytest
+git clone <your-repo-url>
+cd ai110-module3show-musicrecommendersimulation-starter
+```
+
+### 2. Create a virtual environment (recommended)
+
+```bash
+python -m venv .venv
+source .venv/bin/activate       # Mac / Linux
+.venv\Scripts\activate          # Windows
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+> **Note:** `sentence-transformers` will download the `all-MiniLM-L6-v2` model
+> (~80 MB) on first run. This only happens once; it's cached locally afterward.
+
+### 4. Get a free Groq API key
+
+1. Go to [https://console.groq.com](https://console.groq.com) and sign up for free.
+2. Create an API key.
+3. Export it:
+
+```bash
+export GROQ_API_KEY="your_key_here"    # Mac / Linux
+set GROQ_API_KEY=your_key_here         # Windows CMD
+$env:GROQ_API_KEY="your_key_here"      # Windows PowerShell
+```
+
+### 5. Run the chatbot
+
+```bash
+python -m src.chat_app
+```
+
+### 6. (Optional) Run the original rule-based recommender
+
+```bash
+python -m src.main
 ```
 
 ---
 
-## Terminal Output
+## Running Tests
 
-### High-Energy Pop
-![High-Energy Pop](images/profile_pop.png)
+```bash
+# Unit tests (no API key needed)
+pytest tests/test_recommender.py tests/test_rag.py -v
 
-### Chill Lofi
-![Chill Lofi](images/profile_lofi.png)
-
-### Deep Intense Rock
-![Deep Intense Rock](images/profile_rock.png)
-
-### Gym Workout
-![Gym Workout](images/profile_gym.png)
-
-### Late Night Study
-![Late Night Study](images/proflie_study.png)
-
-### Experiment: Weight Shift
-![Experiment](images/profile_experiment.png)
-
----
-
-Below is the same output as plain text for reference:
-
-```
-Loaded songs: 18
-
-==========================================================
-  Profile : High-Energy Pop
-  Genre   : pop | Mood: happy | Energy: 0.85
-==========================================================
-
-  Top 5 Recommendations:
-
-  1. Sunrise City  —  Neon Echo
-     Genre: pop  |  Mood: happy  |  Energy: 0.82
-     Score : 7.95
-     Why   : genre match (+3.0); mood match (+2.0); energy proximity (+1.46); valence proximity (+0.99); electronic preference match (+0.50)
-
-  2. Gym Hero  —  Max Pulse
-     Genre: pop  |  Mood: intense  |  Energy: 0.93
-     Score : 5.80
-     Why   : genre match (+3.0); energy proximity (+1.38); valence proximity (+0.92); electronic preference match (+0.50)
-
-  3. Rooftop Lights  —  Indigo Parade
-     Genre: indie pop  |  Mood: happy  |  Energy: 0.76
-     Score : 4.82
-     Why   : mood match (+2.0); energy proximity (+1.36); valence proximity (+0.96); electronic preference match (+0.50)
-
-  4. Crown Up  —  Malik Rivers
-     Genre: hip-hop  |  Mood: confident  |  Energy: 0.86
-     Score : 2.85
-     Why   : energy proximity (+1.48); valence proximity (+0.87); electronic preference match (+0.50)
-
-  5. Electric Dawn  —  Pulse Circuit
-     Genre: edm  |  Mood: euphoric  |  Energy: 0.95
-     Score : 2.82
-     Why   : energy proximity (+1.35); valence proximity (+0.97); electronic preference match (+0.50)
-
-
-==========================================================
-  Profile : Chill Lofi
-  Genre   : lofi | Mood: chill | Energy: 0.38
-==========================================================
-
-  Top 5 Recommendations:
-
-  1. Library Rain  —  Paper Lanterns
-     Genre: lofi  |  Mood: chill  |  Energy: 0.35
-     Score : 7.94
-     Why   : genre match (+3.0); mood match (+2.0); energy proximity (+1.46); valence proximity (+0.98); acoustic preference match (+0.50)
-
-  2. Midnight Coding  —  LoRoom
-     Genre: lofi  |  Mood: chill  |  Energy: 0.42
-     Score : 7.92
-     Why   : genre match (+3.0); mood match (+2.0); energy proximity (+1.44); valence proximity (+0.98); acoustic preference match (+0.50)
-
-  3. Focus Flow  —  LoRoom
-     Genre: lofi  |  Mood: focused  |  Energy: 0.4
-     Score : 5.96
-     Why   : genre match (+3.0); energy proximity (+1.47); valence proximity (+0.99); acoustic preference match (+0.50)
-
-  4. Spacewalk Thoughts  —  Orbit Bloom
-     Genre: ambient  |  Mood: chill  |  Energy: 0.28
-     Score : 4.78
-     Why   : mood match (+2.0); energy proximity (+1.35); valence proximity (+0.93); acoustic preference match (+0.50)
-
-  5. Coffee Shop Stories  —  Slow Stereo
-     Genre: jazz  |  Mood: relaxed  |  Energy: 0.37
-     Score : 2.85
-     Why   : energy proximity (+1.48); valence proximity (+0.87); acoustic preference match (+0.50)
-
-
-==========================================================
-  Profile : Deep Intense Rock
-  Genre   : rock | Mood: intense | Energy: 0.92
-==========================================================
-
-  Top 5 Recommendations:
-
-  1. Storm Runner  —  Voltline
-     Genre: rock  |  Mood: intense  |  Energy: 0.91
-     Score : 7.95
-     Why   : genre match (+3.0); mood match (+2.0); energy proximity (+1.48); valence proximity (+0.97); electronic preference match (+0.50)
-
-  2. Gym Hero  —  Max Pulse
-     Genre: pop  |  Mood: intense  |  Energy: 0.93
-     Score : 4.66
-     Why   : mood match (+2.0); energy proximity (+1.48); valence proximity (+0.68); electronic preference match (+0.50)
-
-  3. Iron Cathedral  —  Shatter Veil
-     Genre: metal  |  Mood: aggressive  |  Energy: 0.97
-     Score : 2.79
-     Why   : energy proximity (+1.43); valence proximity (+0.86); electronic preference match (+0.50)
-
-  4. Night Drive Loop  —  Neon Echo
-     Genre: synthwave  |  Mood: moody  |  Energy: 0.75
-     Score : 2.70
-     Why   : energy proximity (+1.24); valence proximity (+0.96); electronic preference match (+0.50)
-
-  5. Crown Up  —  Malik Rivers
-     Genre: hip-hop  |  Mood: confident  |  Energy: 0.86
-     Score : 2.64
-     Why   : energy proximity (+1.41); valence proximity (+0.73); electronic preference match (+0.50)
-
-
-==========================================================
-  Profile : Gym Workout
-  Genre   : pop | Mood: intense | Energy: 0.95
-==========================================================
-
-  Top 5 Recommendations:
-
-  1. Gym Hero  —  Max Pulse
-     Genre: pop  |  Mood: intense  |  Energy: 0.93
-     Score : 7.95
-     Why   : genre match (+3.0); mood match (+2.0); energy proximity (+1.47); valence proximity (+0.98); electronic preference match (+0.50)
-
-  2. Sunrise City  —  Neon Echo
-     Genre: pop  |  Mood: happy  |  Energy: 0.82
-     Score : 5.71
-     Why   : genre match (+3.0); energy proximity (+1.30); valence proximity (+0.91); electronic preference match (+0.50)
-
-  3. Storm Runner  —  Voltline
-     Genre: rock  |  Mood: intense  |  Energy: 0.91
-     Score : 4.67
-     Why   : mood match (+2.0); energy proximity (+1.44); valence proximity (+0.73); electronic preference match (+0.50)
-
-  4. Electric Dawn  —  Pulse Circuit
-     Genre: edm  |  Mood: euphoric  |  Energy: 0.95
-     Score : 2.87
-     Why   : energy proximity (+1.50); valence proximity (+0.87); electronic preference match (+0.50)
-
-  5. Crown Up  —  Malik Rivers
-     Genre: hip-hop  |  Mood: confident  |  Energy: 0.86
-     Score : 2.83
-     Why   : energy proximity (+1.36); valence proximity (+0.97); electronic preference match (+0.50)
-
-
-==========================================================
-  Profile : Late Night Study
-  Genre   : ambient | Mood: focused | Energy: 0.3
-==========================================================
-
-  Top 5 Recommendations:
-
-  1. Spacewalk Thoughts  —  Orbit Bloom
-     Genre: ambient  |  Mood: chill  |  Energy: 0.28
-     Score : 5.92
-     Why   : genre match (+3.0); energy proximity (+1.47); valence proximity (+0.95); acoustic preference match (+0.50)
-
-  2. Focus Flow  —  LoRoom
-     Genre: lofi  |  Mood: focused  |  Energy: 0.4
-     Score : 4.84
-     Why   : mood match (+2.0); energy proximity (+1.35); valence proximity (+0.99); acoustic preference match (+0.50)
-
-  3. Library Rain  —  Paper Lanterns
-     Genre: lofi  |  Mood: chill  |  Energy: 0.35
-     Score : 2.92
-     Why   : energy proximity (+1.42); valence proximity (+1.00); acoustic preference match (+0.50)
-
-  4. Willow and Rain  —  Fern Hollow
-     Genre: folk  |  Mood: melancholic  |  Energy: 0.29
-     Score : 2.82
-     Why   : energy proximity (+1.48); valence proximity (+0.84); acoustic preference match (+0.50)
-
-  5. Coffee Shop Stories  —  Slow Stereo
-     Genre: jazz  |  Mood: relaxed  |  Energy: 0.37
-     Score : 2.79
-     Why   : energy proximity (+1.40); valence proximity (+0.89); acoustic preference match (+0.50)
+# Automated RAG evaluation harness (no API key needed)
+python -m tests.test_harness
 ```
 
 ---
 
-## Experiments You Tried
+## Sample Interactions
 
-**Experiment 1 — Weight Shift (Double energy, halve genre)**
+### Interaction 1 — Study session
 
-Changed genre weight from 3.0 → 1.5 and energy weight from 1.5 → 3.0 for the High-Energy Pop profile. Results:
+```
+You: I need something really chill and focused for studying late at night
 
-| Rank | Baseline | Experimental |
-|------|----------|-------------|
-| 1 | Sunrise City (7.95) | Sunrise City (7.90) |
-| 2 | Gym Hero (5.80) | Rooftop Lights (6.19) |
-| 3 | Rooftop Lights (4.82) | Gym Hero (5.68) |
-| 4 | Crown Up (2.85) | Crown Up (4.34) |
-| 5 | Electric Dawn (2.82) | Electric Dawn (4.17) |
+  ┌─ Retrieved from catalog ──────────────────────────────────
+  │ 1. Study Hall          Quiet Frequency   [High   0.612]
+  │ 2. Focus Flow          LoRoom            [High   0.589]
+  │ 3. Library Rain        Paper Lanterns    [Medium 0.541]
+  │ 4. Deep Blue Drift     Coral Static      [Medium 0.498]
+  │ 5. Midnight Coding     LoRoom            [Medium 0.471]
+  └───────────────────────────────────────────────────────────
 
-Rooftop Lights jumped from #3 to #2 because it has a mood match (happy) and very close energy, which became worth more. Gym Hero dropped because it only matches genre, and that bonus shrank. This shows how sensitive the middle rankings are to weight choices. The top result (Sunrise City) was stable because it matches on all features simultaneously.
+VibeFinder: Perfect late-night study session coming right up! Based on
+what you're looking for, I'd start with **Study Hall** by Quiet Frequency —
+it's a lofi track built specifically for focus with very low energy (0.33)
+and a calm tempo. **Focus Flow** by LoRoom is another great pick, explicitly
+tagged as "focused" mood with gentle acoustics. For some variety, **Library
+Rain** by Paper Lanterns brings that cozy, slightly melancholic lofi feel
+that's perfect for long study blocks. If you want something even more ambient
+and spacious, **Deep Blue Drift** by Coral Static dips into ambient territory
+with almost no energy (0.25) — ideal when you want music that disappears into
+the background.
+```
 
-**Experiment 2 — Adversarial Profile: Conflicting Preferences**
+### Interaction 2 — Gym workout
 
-Tested a profile with `energy: 0.9` (very intense) and `mood: sad` (not present in catalog at all). Result: the system fell back entirely on energy proximity, since no song had a "sad" mood. The top results were Iron Cathedral, Electric Dawn, and Gym Hero — all high-energy. The absence of a mood match was invisible to the user in the output unless they read the "Why" explanations carefully. This is a real usability flaw.
+```
+You: Give me maximum energy bangers for a gym session
+
+  ┌─ Retrieved from catalog ──────────────────────────────────
+  │ 1. Gym Hero            Max Pulse         [High   0.644]
+  │ 2. Thunderclap         Iron Wolves       [High   0.601]
+  │ 3. Electric Dawn       Pulse Circuit     [Medium 0.558]
+  │ 4. Bass Drop City      Frequency Unit    [Medium 0.532]
+  │ 5. Run the Night       Sprint Code       [Medium 0.497]
+  └───────────────────────────────────────────────────────────
+
+VibeFinder: Let's get those gains! 🏋️ Your workout playlist should open
+with **Gym Hero** by Max Pulse — literally named for gym sessions, it's an
+intense pop track at 0.93 energy and 132 BPM, highly danceable. Pair it with
+**Thunderclap** by Iron Wolves for that heavy metal surge (0.99 energy, 175 BPM)
+when you need to push through a tough set. **Electric Dawn** and **Bass Drop
+City** bring the EDM energy (both above 0.95) for cardio intervals. Close out
+with **Run the Night** by Sprint Code — confident hip-hop at 0.90 energy to
+keep the momentum.
+```
+
+### Interaction 3 — Sad/nostalgic mood
+
+```
+You: I'm feeling really sad and nostalgic today
+
+  ┌─ Retrieved from catalog ──────────────────────────────────
+  │ 1. Willow and Rain     Fern Hollow       [High   0.578]
+  │ 2. Dusty Road Home     The Hollow Pines  [Medium 0.521]
+  │ 3. Broken Strings      Echo Plains       [Medium 0.488]
+  │ 4. Moonlit Sonata      Clara Voss        [Medium 0.452]
+  │ 5. Anxiety Dreams      Pale Signal       [Low    0.381]
+  └───────────────────────────────────────────────────────────
+
+VibeFinder: Sometimes you just need music that understands the feeling.
+**Willow and Rain** by Fern Hollow is a melancholic folk song with low energy
+and high acousticness — perfectly understated. **Dusty Road Home** adds that
+nostalgic country warmth with storytelling energy. **Broken Strings** by
+Echo Plains is an indie track sitting in that bittersweet space between sad
+and reflective. If you want something more instrumental, **Moonlit Sonata**
+by Clara Voss is a peaceful classical piece that gives feelings room to breathe.
+```
 
 ---
 
-## Limitations and Risks
+## Design Decisions
 
-- The catalog is tiny (18 songs). Genre diversity is limited, especially for newer or niche genres.
-- The genre-dominance problem: a genre match at 3.0 points overwhelms nearly every other signal. Users exploring outside their genre will almost never see cross-genre suggestions.
-- The system has no memory — it cannot adapt based on what a user has already heard or skipped.
-- Mood labels are categorical and fixed. A song labeled "chill" and a song labeled "relaxed" are treated as completely different even though they feel very similar.
-- No lyrics, language, or cultural context is considered.
+**Why RAG instead of just prompting the LLM directly?**
+Without RAG, the LLM would generate song recommendations from its training
+data — which means hallucinated titles, made-up artists, and songs that don't
+exist in the actual catalog. By retrieving real songs first and injecting them
+into the prompt, every recommendation is grounded in reality.
 
-See `model_card.md` for a deeper discussion of limitations and bias.
+**Why sentence-transformers + FAISS instead of an API-based embedding service?**
+The `all-MiniLM-L6-v2` model is free, runs locally (no API cost), and is fast
+enough to embed 30 songs at startup in under a second. FAISS is a battle-tested
+vector search library from Meta that scales to millions of vectors if the catalog
+grows. Using local embeddings also means the retrieval step works without internet.
+
+**Why Groq + LLaMA 3 instead of OpenAI?**
+Groq offers a generous free tier with very fast inference (often 10× faster than
+OpenAI for the same model size). LLaMA 3 8B is more than capable for this task.
+For a classroom project with unpredictable usage, free tier matters.
+
+**Why keep the original recommender.py?**
+The original rule-based system still has value as a baseline. The new RAG system
+can be compared against it: for structured queries, the rule-based system is
+more predictable; for vague natural-language requests, RAG is more flexible.
+Keeping both also shows the evolution of the project clearly.
+
+**Trade-offs:**
+The catalog is small (30 songs). Semantic search works best with diverse, rich
+descriptions — a small catalog limits how distinguishable the embeddings are,
+which is why some retrieval confidence scores are in the "Medium" range rather
+than "High". A production system would use thousands of songs and richer metadata
+(tempo descriptions, lyrical themes, cultural context).
 
 ---
 
-## Reflection
+## Testing Summary
 
-Read and complete `model_card.md`:
+**Unit tests** (`pytest tests/test_rag.py`): 20 tests covering `song_to_text` output
+format, retrieval count and ordering, genre/mood metadata filtering, confidence label
+bucketing, guardrail acceptance/rejection, and prompt builder content. All 20 pass.
 
-[**Model Card**](model_card.md)
+**Legacy tests** (`pytest tests/test_recommender.py`): 2 original tests still pass
+unchanged — the RAG layer is additive and does not break existing logic.
 
-The most important thing I learned from this project is that the weight choices in a simple recommender are not neutral — they encode assumptions about what matters to users. By setting genre at 3.0 points, I was implicitly saying "genre is more important than mood, energy, and acousticness combined." That might be true for some people and completely wrong for others. Real platforms solve this by learning weights from user behavior data, but that introduces its own biases (toward mainstream tastes, toward engagement over satisfaction).
+**Automated harness** (`python -m tests.test_harness`): 12 predefined input→output
+test cases, each checking that the top-retrieved song matches an expected genre or mood
+with a minimum confidence threshold. In testing: **10/12 passed** (83%). The two
+failures were "aggressive heavy metal" (retrieved edm instead of metal — only 1 metal
+song in the catalog) and "romantic r&b" (retrieved pop instead of r&b — similar
+embedding space). Both are catalog diversity issues, not algorithmic failures.
 
-I was also surprised by how "smart" the system could feel with only five features. When the profile closely matches songs in the catalog (like Chill Lofi or High-Energy Pop), the top results are genuinely reasonable suggestions. The recommendations feel like they understand the user — even though the underlying logic is just arithmetic. This is a good reminder that "feels intelligent" and "is intelligent" are not the same thing, and that transparency (the "Why" explanation output) matters a lot for helping users understand and trust what an algorithm is doing.
+**What worked well:** Semantic retrieval consistently beat keyword matching for
+natural-language queries. Queries like "pump-up gym anthem" correctly retrieved
+high-energy intense songs even though none of those exact words appear in the CSV.
+
+**What didn't work:** Very specific genre requests (metal, reggae, country) under-perform
+because those genres have only 1–2 songs in the catalog. The retrieval confidence for
+these is genuinely low (0.25–0.35), which the confidence warning system correctly flags.
+
+**Average retrieval confidence across 12 harness cases: 0.48** (Medium–High range).
 
 ---
 
-## Reflection on AI Tool Use
+## Reflection and Ethics
 
-I used AI assistance throughout this project to structure the scoring formula, generate diverse song entries for the CSV, brainstorm edge-case profiles, and think through potential biases. The tools were most helpful when I gave them specific constraints — for example, asking for songs that represent genres not already in the dataset, or asking for a critique of whether my user profile could distinguish between "intense rock" and "chill lofi" at the same time. I needed to double-check suggestions against the actual catalog and run the code to see whether the recommendations felt right, since the AI could suggest plausible-sounding weights without verifying they produced good results on real data.
+**Limitations and biases:**
+The catalog covers mainly Western popular genres. Users who prefer K-pop, Afrobeats,
+Bollywood, or regional folk styles will find no matches. The `song_to_text` conversion
+uses English mood and energy descriptors, which may not translate well across cultural
+contexts. The sentence-transformers model was trained predominantly on English text.
 
+**Could the system be misused?**
+The primary misuse risk is that users try to use VibeFinder as a general-purpose
+chatbot. The guardrail mitigates this by rejecting queries without music-related keywords.
+A more sophisticated guardrail using a classifier would be more robust than keyword matching.
+
+**What surprised me while testing:**
+The semantic similarity between "lofi study music" and ambient/focused songs was much
+higher than expected — the model clearly learned that these genres cluster together in
+semantic space. Conversely, "heavy metal" and "edm" scored similarly for "gym" queries,
+suggesting the embedding space represents energy level more strongly than genre identity.
+
+**AI collaboration:**
+One helpful AI suggestion was to L2-normalize embeddings before building the FAISS
+inner-product index, which converts inner product to cosine similarity — a subtle but
+important correctness fix. One flawed suggestion was to use `IndexIVFFlat` (approximate
+nearest neighbor) for the FAISS index — this requires training on a minimum number of
+vectors (typically 39× `nlist`), which with only 30 songs would cause a runtime error.
+The simpler `IndexFlatIP` is the correct choice for a small catalog.
+
+---
+
+## Demo Walkthrough
+
+> 📹 **Loom video:** [Watch the demo](https://www.loom.com/share/4d0572ead1d644608bb5f97e6ca902bd)
+
+The video demonstrates:
+- End-to-end run with 3 different queries (study, gym, sad mood)
+- Retrieval metadata display (confidence scores for each song)
+- Guardrail behavior (off-topic query rejection)
+- Clear outputs for each case
+
+---
+
+## File Structure
+
+```
+.
+├── data/
+│   └── songs.csv               ← 30-song catalog
+├── src/
+│   ├── recommender.py          ← Original rule-based recommender (unchanged)
+│   ├── main.py                 ← Original CLI runner (unchanged)
+│   ├── rag_recommender.py      ← NEW: RAG engine (embeddings + FAISS retrieval)
+│   ├── groq_chat.py            ← NEW: Groq LLaMA3 integration + guardrail
+│   └── chat_app.py             ← NEW: Interactive chatbot entrypoint
+├── tests/
+│   ├── test_recommender.py     ← Original tests (still pass)
+│   ├── test_rag.py             ← NEW: 20 RAG unit tests
+│   └── test_harness.py         ← NEW: Automated evaluation harness
+├── assets/
+│   └── system_diagram.md       ← Mermaid system architecture diagram
+├── requirements.txt            ← Updated with RAG dependencies
+├── README.md                   ← This file
+└── model_card.md               ← Updated model card with RAG reflections
+```
+
+---
+
+## Portfolio Reflection
+
+Building VibeFinder 2.0 taught me that RAG is not just a technique — it's a design
+philosophy. The critical insight is separating *what you know* (the catalog) from
+*what you can say* (the LLM's generation), and ensuring the LLM only says things
+grounded in what you know. This project demonstrates skills in vector search,
+embedding models, prompt engineering, API integration, error handling, and evaluation
+design — the full stack of applied AI engineering.
